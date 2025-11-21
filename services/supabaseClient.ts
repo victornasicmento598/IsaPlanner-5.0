@@ -1,24 +1,12 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// Função para buscar variáveis de ambiente de forma segura, focada no padrão Vite.
-const getEnv = (key: string): string | undefined => {
-  try {
-    // @ts-ignore - Padrão Vite/Moderno é o único que precisamos para a Vercel
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
-       // @ts-ignore
-       return import.meta.env[key];
-    }
-  } catch (e) { /* Ignora o erro se import.meta não existir */ }
-  return undefined;
-};
-
-const SUPABASE_URL = getEnv('VITE_SUPABASE_URL');
-const SUPABASE_ANON_KEY = getEnv('VITE_SUPABASE_ANON_KEY');
+// --- CHAVES ADICIONADAS DIRETAMENTE NO CÓDIGO ---
+// Esta é a solução para fazer o app funcionar na Vercel sem um "build step".
+const SUPABASE_URL = "https://xzznwouqvvtyivijqvel.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6em53b3VxdnZ0eWl2aWpxdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MzQyNTksImV4cCI6MjA3OTMxMDI1OX0.GGlsUZsZbq4s-pUVAO5bbiVtbb2iPZCsVinFkc_uZf4";
 
 const isConfigured = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
-
 let supabaseInstance: SupabaseClient | null = null;
-let warningShown = false;
 
 /**
  * Inicializa o cliente Supabase apenas uma vez (padrão Singleton "preguiçoso").
@@ -31,23 +19,18 @@ export const getSupabase = (): SupabaseClient | null => {
         return supabaseInstance;
     }
 
-    // Se não está configurado, retorne null e mostre um aviso (apenas uma vez).
+    // Se não está configurado, retorne null.
     if (!isConfigured) {
-        if (!warningShown) {
-            console.warn("IsaPlanner: Chaves Supabase não encontradas. App rodando em modo offline (LocalStorage).");
-            warningShown = true;
-        }
+        console.error("IsaPlanner: Chaves Supabase não foram configuradas no código. App não pode conectar ao banco.");
         return null;
     }
 
     // Se está configurado mas ainda não foi instanciado, crie a instância.
     try {
-        console.log("IsaPlanner: Tentando inicializar cliente Supabase sob demanda...");
         supabaseInstance = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!);
-        console.log("IsaPlanner: Cliente Supabase inicializado com sucesso.");
         return supabaseInstance;
     } catch (error) {
-        console.error("IsaPlanner: Erro CRÍTICO ao criar cliente Supabase. Verifique as chaves na Vercel.", error);
+        console.error("IsaPlanner: Erro CRÍTICO ao criar cliente Supabase.", error);
         return null; // Falha na criação, força o modo offline.
     }
 };
