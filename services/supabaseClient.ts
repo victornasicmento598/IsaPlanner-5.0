@@ -4,16 +4,25 @@ import { createClient } from '@supabase/supabase-js';
 // CONFIGURAÇÃO DO SUPABASE
 // =================================================================
 
-// Função auxiliar para ler variáveis de ambiente de forma segura.
-// Evita o erro "ReferenceError: process is not defined" que causa a tela branca.
+// Função robusta para buscar variáveis de ambiente em diferentes ambientes (Vite, Next.js, Create React App)
 const getEnv = (key: string, fallback: string): string => {
+  // 1. Tenta usar import.meta.env (Padrão Vite/Moderno)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) {
+       // @ts-ignore
+       return import.meta.env[key] as string;
+    }
+  } catch (e) {}
+
+  // 2. Tenta usar process.env (Padrão Node/CRA)
   try {
     if (typeof process !== 'undefined' && process.env && process.env[key]) {
       return process.env[key] as string;
     }
-  } catch (e) {
-    // Ignora se process não estiver definido
-  }
+  } catch (e) {}
+
+  // 3. Retorna fallback
   return fallback;
 };
 
@@ -25,11 +34,15 @@ export const isSupabaseConfigured = SUPABASE_URL !== "SUA_PROJECT_URL_AQUI" && !
 
 let supabaseClient = null;
 
-if (isSupabaseConfigured) {
-    supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    console.log("IsaPlanner: Cliente Supabase inicializado.");
-} else {
-    console.warn("IsaPlanner: Supabase não configurado. Usando modo offline (LocalStorage).");
+try {
+  if (isSupabaseConfigured) {
+      supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      console.log("IsaPlanner: Cliente Supabase inicializado.");
+  } else {
+      console.warn("IsaPlanner: Supabase não configurado. Usando modo offline (LocalStorage).");
+  }
+} catch (error) {
+  console.error("IsaPlanner: Erro fatal ao criar cliente Supabase:", error);
 }
 
 export const supabase = supabaseClient;

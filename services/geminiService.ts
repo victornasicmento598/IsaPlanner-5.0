@@ -1,25 +1,52 @@
 import { GoogleGenAI } from "@google/genai";
 import { Subject } from "../types";
 
-// Acesso seguro à variável de ambiente para evitar crash da tela branca
+// Função robusta para buscar API Key
 const getApiKey = (): string => {
+  // 1. Tenta usar import.meta.env (Vite)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.API_KEY) {
+        // @ts-ignore
+        return import.meta.env.API_KEY;
+    }
+  } catch (e) {}
+
+  // 2. Tenta usar process.env (Node/CRA)
   try {
     if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
       return process.env.API_KEY;
     }
   } catch (e) {}
+  
   return '';
 };
 
-const apiKey = getApiKey();
+let aiInstance: GoogleGenAI | null = null;
 
-// Inicializa o cliente apenas se houver chave, ou usa uma string vazia para evitar erro fatal no construtor,
-// tratando a falta de chave dentro das funções.
-const ai = new GoogleGenAI({ apiKey: apiKey || 'PENDING_KEY' });
+// Inicialização preguiçosa (Lazy) para evitar crash na inicialização do app
+const getAIClient = () => {
+    if (aiInstance) return aiInstance;
+
+    const key = getApiKey();
+    if (!key || key === 'PENDING_KEY') {
+        console.warn("API Key do Gemini não encontrada.");
+        return null;
+    }
+
+    try {
+        aiInstance = new GoogleGenAI({ apiKey: key });
+        return aiInstance;
+    } catch (e) {
+        console.error("Erro ao inicializar GoogleGenAI:", e);
+        return null;
+    }
+}
 
 export const generateStudyPlan = async (subject: Subject, topic: string, examDate: string): Promise<string> => {
-  if (!apiKey || apiKey === 'PENDING_KEY') {
-      console.warn("API Key do Gemini não encontrada.");
+  const ai = getAIClient();
+  
+  if (!ai) {
       return "Para eu criar um plano de estudos, preciso que a chave da API seja configurada no Vercel!";
   }
 
@@ -44,12 +71,14 @@ export const generateStudyPlan = async (subject: Subject, topic: string, examDat
     return response.text || "Não consegui criar o plano agora, mas você vai arrasar!";
   } catch (error) {
     console.error("Error generating study plan:", error);
-    return "Erro ao conectar com o assistente robô. Tente novamente mais tarde!";
+    return "Erro ao conectar com o assistente robô. Verifique a chave da API.";
   }
 };
 
 export const getMotivationalQuote = async (): Promise<string> => {
-    if (!apiKey || apiKey === 'PENDING_KEY') {
+    const ai = getAIClient();
+    
+    if (!ai) {
         return "Você é capaz de coisas incríveis!";
     }
 
