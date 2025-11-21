@@ -26,8 +26,8 @@ const getEnv = (key: string, fallback: string): string => {
   return fallback;
 };
 
-const SUPABASE_URL: string = getEnv('SUPABASE_URL', "https://xzznwouqvvtyivijqvel.supabase.co");
-const SUPABASE_ANON_KEY: string = getEnv('SUPABASE_ANON_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6em53b3VxdnZ0eWl2aWpxdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MzQyNTksImV4cCI6MjA3OTMxMDI1OX0.GGlsUZsZbq4s-pUVAO5bbiVtbb2iPZCsVinFkc_uZf4");
+const SUPABASE_URL: string = getEnv('VITE_SUPABASE_URL', "https://xzznwouqvvtyivijqvel.supabase.co");
+const SUPABASE_ANON_KEY: string = getEnv('VITE_SUPABASE_ANON_KEY', "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh6em53b3VxdnZ0eWl2aWpxdmVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3MzQyNTksImV4cCI6MjA3OTMxMDI1OX0.GGlsUZsZbq4s-pUVAO5bbiVtbb2iPZCsVinFkc_uZf4");
 
 // Verifica se o Supabase foi configurado corretamente
 export const isSupabaseConfigured = SUPABASE_URL !== "SUA_PROJECT_URL_AQUI" && !SUPABASE_URL.includes("AQUI");

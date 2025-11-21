@@ -6,16 +6,16 @@ const getApiKey = (): string => {
   // 1. Tenta usar import.meta.env (Vite)
   try {
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.API_KEY) {
+    if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_KEY) {
         // @ts-ignore
-        return import.meta.env.API_KEY;
+        return import.meta.env.VITE_API_KEY;
     }
   } catch (e) {}
 
   // 2. Tenta usar process.env (Node/CRA)
   try {
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      return process.env.API_KEY;
+    if (typeof process !== 'undefined' && process.env && process.env.VITE_API_KEY) {
+      return process.env.VITE_API_KEY;
     }
   } catch (e) {}
   
