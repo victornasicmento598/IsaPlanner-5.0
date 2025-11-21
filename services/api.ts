@@ -134,16 +134,3 @@ export const deleteTask = async (task: Task) => {
         notifyLocalChange();
     }
 }
-
-export const updateAiPlan = async (id: string, plan: string) => {
-    const supabase = getSupabase();
-    if (supabase) {
-        await supabase.from('tasks').update({ aiStudyPlan: plan }).eq('id', id);
-    } else {
-        const tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        const task = tasks.find((t: Task) => t.id === id);
-        if (task) task.aiStudyPlan = plan;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-        notifyLocalChange();
-    }
-}

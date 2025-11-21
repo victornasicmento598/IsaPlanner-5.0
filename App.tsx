@@ -4,8 +4,7 @@ import { TaskCard } from './components/TaskCard';
 import { NewTaskModal } from './components/NewTaskModal';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { DashboardCharts } from './components/DashboardCharts';
-import { generateStudyPlan, getMotivationalQuote } from './services/geminiService';
-import { subscribeToTasks, saveTask, deleteTask, toggleTaskCompletion, updateAiPlan } from './services/api';
+import { subscribeToTasks, saveTask, deleteTask, toggleTaskCompletion } from './services/api';
 import { Plus, CalendarDays, BookOpen, Library, Sparkles, Rocket, Filter, Search, XCircle, Flame } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -18,9 +17,6 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterPopoverOpen, setIsFilterPopoverOpen] = useState(false);
   
-  const [generatingId, setGeneratingId] = useState<string | null>(null);
-  const [quote, setQuote] = useState<string>('');
-  
   const filterRef = React.useRef<HTMLDivElement>(null);
 
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
@@ -32,10 +28,6 @@ const App: React.FC = () => {
       setTasks(data);
     });
     return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    getMotivationalQuote().then(setQuote);
   }, []);
   
   useEffect(() => {
@@ -88,15 +80,6 @@ const App: React.FC = () => {
     await deleteTask(taskToDelete);
     setIsConfirmModalOpen(false);
     setTaskToDelete(null);
-  };
-
-  const handleGenerateAI = async (task: Task) => {
-    if (!task.examContent) return;
-    if (task.aiStudyPlan) return; // Don't regenerate if plan exists
-    setGeneratingId(task.id);
-    const plan = await generateStudyPlan(task.subject, task.examContent, task.date);
-    await updateAiPlan(task.id, plan);
-    setGeneratingId(null);
   };
 
   const areFiltersActive = typeFilter !== 'ALL' || subjectFilter !== 'ALL' || searchTerm.trim() !== '';
@@ -186,7 +169,7 @@ const App: React.FC = () => {
                 Olá, Isabelle! <span className="text-2xl animate-wave origin-bottom-right">👋</span>
              </h2>
              <p className="text-pink-100/80 text-lg font-light max-w-xl">
-                {quote ? `"${quote}"` : "Pronta para organizar seus estudos hoje?"}
+                "Você é capaz de coisas incríveis!"
              </p>
              
              <button 
@@ -357,8 +340,6 @@ const App: React.FC = () => {
                         task={task} 
                         onToggleComplete={toggleTask}
                         onDelete={requestDeleteTask}
-                        onGenerateAI={handleGenerateAI}
-                        isGenerating={generatingId === task.id}
                         onEdit={handleEdit}
                     />
                 ))}

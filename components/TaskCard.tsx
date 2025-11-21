@@ -7,8 +7,6 @@ interface TaskCardProps {
   task: Task;
   onToggleComplete: (id: string) => void;
   onDelete: (id: string) => void;
-  onGenerateAI: (task: Task) => void;
-  isGenerating: boolean;
   onEdit: (task: Task) => void;
 }
 
@@ -147,7 +145,7 @@ const ImageViewer: React.FC<{ src: string; onClose: () => void }> = ({ src, onCl
 };
 
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onToggleComplete, onDelete, onGenerateAI, isGenerating, onEdit }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onToggleComplete, onDelete, onEdit }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
   const gradient = SUBJECT_COLORS[task.subject] || 'from-gray-500 to-gray-600';
@@ -262,16 +260,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onToggleComplete, onDe
 
           <div className="flex items-center justify-between mt-4 pt-3 border-t border-white/10">
             <div className="flex-1 flex items-center gap-4">
-                {isExam && task.examContent && !task.isCompleted && (
-                    <button 
-                    onClick={() => onGenerateAI(task)}
-                    disabled={isGenerating}
-                    className="flex items-center gap-2 text-xs font-bold text-cyan-300 hover:text-cyan-200 transition-colors disabled:opacity-50"
-                    >
-                      <Bot size={16} />
-                      {task.aiStudyPlan ? "Ver Dicas do Robô" : "Ajuda do Robô"}
-                    </button>
-                )}
                 {task.attachment && (
                   <div className="flex items-center gap-1.5 text-xs text-pink-200/60 font-medium">
                     <Paperclip size={14} />
@@ -322,18 +310,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onToggleComplete, onDe
                     </div>
                   </button>
                 </div>
-              )}
-
-              {task.aiStudyPlan && (
-                  <div className="mt-3">
-                      <div className="flex items-center gap-2 mb-2">
-                          <Bot size={16} className="text-cyan-400"/>
-                          <span className="text-xs text-cyan-400 font-bold uppercase">Dicas de Estudo da IA</span>
-                      </div>
-                      <div className="bg-cyan-950/40 p-4 rounded-xl border border-cyan-500/20 text-sm text-cyan-100 prose prose-invert prose-sm max-w-none">
-                          <ReactMarkdown>{task.aiStudyPlan}</ReactMarkdown>
-                      </div>
-                  </div>
               )}
           </div>
         )}
