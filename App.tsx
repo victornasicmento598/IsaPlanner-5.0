@@ -5,10 +5,11 @@ import { NewTaskModal } from './components/NewTaskModal';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { DashboardCharts } from './components/DashboardCharts';
 import { subscribeToTasks, saveTask, deleteTask, toggleTaskCompletion } from './services/api';
-import { Plus, CalendarDays, BookOpen, Library, Sparkles, Rocket, Filter, Search, XCircle, Flame } from 'lucide-react';
+import { Plus, CalendarDays, BookOpen, Library, Sparkles, Rocket, Filter, Search, XCircle, Flame, Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // NOVO ESTADO DE CARREGAMENTO
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<Task | null>(null);
   
@@ -22,10 +23,11 @@ const App: React.FC = () => {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
-  // Real-time listener for tasks (Abstraction handles Firebase vs LocalStorage)
+  // Real-time listener for tasks
   useEffect(() => {
     const unsubscribe = subscribeToTasks((data) => {
       setTasks(data);
+      setIsLoading(false); // Desativa o loading quando os dados chegam
     });
     return () => unsubscribe();
   }, []);
@@ -334,17 +336,23 @@ const App: React.FC = () => {
 
 
              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredTasks.map(task => (
-                    <TaskCard 
-                        key={task.id} 
-                        task={task} 
-                        onToggleComplete={toggleTask}
-                        onDelete={requestDeleteTask}
-                        onEdit={handleEdit}
-                    />
-                ))}
-                
-                {filteredTasks.length === 0 && (
+                {isLoading ? (
+                  <div className="col-span-full py-12 flex flex-col items-center justify-center text-pink-200/50">
+                    <Loader2 size={48} className="mb-4 animate-spin text-fuchsia-400"/>
+                    <p className="text-lg">Carregando suas tarefas...</p>
+                  </div>
+                ) : filteredTasks.length > 0 ? (
+                    filteredTasks.map((task, index) => (
+                        <div key={task.id} className="animate-in fade-in-0 slide-in-from-top-4 duration-300" style={{ animationDelay: `${index * 50}ms`}}>
+                            <TaskCard 
+                                task={task} 
+                                onToggleComplete={toggleTask}
+                                onDelete={requestDeleteTask}
+                                onEdit={handleEdit}
+                            />
+                        </div>
+                    ))
+                ) : (
                     <div className="col-span-full py-12 flex flex-col items-center justify-center text-pink-200/30 border-2 border-dashed border-white/10 rounded-2xl">
                         <CalendarDays size={48} className="mb-3 opacity-50"/>
                         <p>Nenhuma tarefa encontrada.</p>
