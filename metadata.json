@@ -1,0 +1,7 @@
+{
+  "name": "IsaPlanner 5.0",
+  "description": "Um planejador futurista e inteligente para a Isabelle organizar seus estudos, trabalhos e provas do 5º ano.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
