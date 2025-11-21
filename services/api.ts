@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from './supabaseClient';
+import { getSupabase } from './supabaseClient';
 import { Task } from '../types';
 
 const STORAGE_KEY = 'isaplanner_tasks';
@@ -15,7 +15,10 @@ const base64ToBlob = async (base64: string) => {
 };
 
 export const subscribeToTasks = (callback: (tasks: Task[]) => void) => {
-  if (isSupabaseConfigured && supabase) {
+  const supabase = getSupabase();
+
+  if (supabase) {
+    // ONLINE MODE: Supabase
     // 1. Initial Fetch
     supabase
       .from('tasks')
@@ -31,9 +34,7 @@ export const subscribeToTasks = (callback: (tasks: Task[]) => void) => {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'tasks' },
-        (payload) => {
-            // Simple strategy: Refetch all on change to ensure consistency
-            // In a larger app, we would merge payload.new into state
+        () => { // Refetch all on any change for simplicity
             supabase
             .from('tasks')
             .select('*')
@@ -49,7 +50,7 @@ export const subscribeToTasks = (callback: (tasks: Task[]) => void) => {
     };
 
   } else {
-    // LocalStorage Mode (Fallback)
+    // OFFLINE MODE: LocalStorage
     const loadTasks = () => {
       try {
         const stored = localStorage.getItem(STORAGE_KEY);
@@ -59,79 +60,43 @@ export const subscribeToTasks = (callback: (tasks: Task[]) => void) => {
       }
     };
     
-    // Initial load
     callback(loadTasks());
-
-    // Listen for local changes
     const handler = () => callback(loadTasks());
     window.addEventListener('local-tasks-changed', handler);
-    
-    // Cleanup
     return () => window.removeEventListener('local-tasks-changed', handler);
   }
 };
 
 export const saveTask = async (task: Omit<Task, 'id' | 'isCompleted'> | Task) => {
+  const supabase = getSupabase();
   let taskToSave = { ...task };
 
-  if (isSupabaseConfigured && supabase) {
-     // Supabase Mode
+  if (supabase) {
      const taskId = 'id' in taskToSave ? taskToSave.id : crypto.randomUUID();
 
-     // Handle image upload
      if (taskToSave.attachment && taskToSave.attachment.startsWith('data:image')) {
         try {
             const blob = await base64ToBlob(taskToSave.attachment);
             const fileName = `${taskId}-${Date.now()}.jpg`;
-            
-            const { data, error } = await supabase.storage
-                .from('attachments')
-                .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
-
-            if (error) throw error;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('attachments')
-                .getPublicUrl(fileName);
-
+            await supabase.storage.from('attachments').upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
+            const { data: { publicUrl } } = supabase.storage.from('attachments').getPublicUrl(fileName);
             taskToSave.attachment = publicUrl;
-        } catch (e) {
-            console.error("Erro no upload:", e);
-            // If upload fails, we might save without image or handle error
-        }
+        } catch (e) { console.error("Erro no upload:", e); }
      }
 
      if ('id' in taskToSave) {
-        // Update
-        const { error } = await supabase
-            .from('tasks')
-            .update(taskToSave)
-            .eq('id', taskToSave.id);
-        if (error) console.error("Erro ao atualizar:", error);
+        await supabase.from('tasks').update(taskToSave).eq('id', taskToSave.id);
      } else {
-        // Insert
-        const { error } = await supabase
-            .from('tasks')
-            .insert([{ ...taskToSave, id: taskId, isCompleted: false }]);
-        if (error) console.error("Erro ao criar:", error);
+        await supabase.from('tasks').insert([{ ...taskToSave, id: taskId, isCompleted: false }]);
      }
 
   } else {
-    // LocalStorage Mode
     const tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    
     if ('id' in taskToSave) {
        const index = tasks.findIndex((t: Task) => t.id === taskToSave.id);
-       if (index !== -1) {
-         tasks[index] = { ...tasks[index], ...taskToSave };
-       }
+       if (index !== -1) tasks[index] = { ...tasks[index], ...taskToSave };
     } else {
-       const newTask = { 
-         ...taskToSave, 
-         id: crypto.randomUUID(), 
-         isCompleted: false 
-       };
-       tasks.push(newTask);
+       tasks.push({ ...taskToSave, id: crypto.randomUUID(), isCompleted: false });
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
     notifyLocalChange();
@@ -139,38 +104,29 @@ export const saveTask = async (task: Omit<Task, 'id' | 'isCompleted'> | Task) =>
 };
 
 export const toggleTaskCompletion = async (id: string, currentStatus: boolean) => {
-    if (isSupabaseConfigured && supabase) {
-        await supabase
-            .from('tasks')
-            .update({ isCompleted: !currentStatus })
-            .eq('id', id);
+    const supabase = getSupabase();
+    if (supabase) {
+        await supabase.from('tasks').update({ isCompleted: !currentStatus }).eq('id', id);
     } else {
         const tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        const index = tasks.findIndex((t: Task) => t.id === id);
-        if (index !== -1) {
-            tasks[index].isCompleted = !currentStatus;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-            notifyLocalChange();
-        }
+        const task = tasks.find((t: Task) => t.id === id);
+        if (task) task.isCompleted = !currentStatus;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        notifyLocalChange();
     }
 }
 
 export const deleteTask = async (task: Task) => {
-    if (isSupabaseConfigured && supabase) {
-        // Delete image if exists
+    const supabase = getSupabase();
+    if (supabase) {
         if (task.attachment && task.attachment.includes('supabase')) {
             try {
-                // Extract filename from URL
                 const urlParts = task.attachment.split('/');
                 const fileName = urlParts[urlParts.length - 1];
                 await supabase.storage.from('attachments').remove([fileName]);
             } catch (e) { console.error("Erro ao deletar imagem:", e); }
         }
-        
-        await supabase
-            .from('tasks')
-            .delete()
-            .eq('id', task.id);
+        await supabase.from('tasks').delete().eq('id', task.id);
     } else {
         const tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         const newTasks = tasks.filter((t: Task) => t.id !== task.id);
@@ -180,18 +136,14 @@ export const deleteTask = async (task: Task) => {
 }
 
 export const updateAiPlan = async (id: string, plan: string) => {
-    if (isSupabaseConfigured && supabase) {
-        await supabase
-            .from('tasks')
-            .update({ aiStudyPlan: plan })
-            .eq('id', id);
+    const supabase = getSupabase();
+    if (supabase) {
+        await supabase.from('tasks').update({ aiStudyPlan: plan }).eq('id', id);
     } else {
         const tasks = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-        const index = tasks.findIndex((t: Task) => t.id === id);
-        if (index !== -1) {
-            tasks[index].aiStudyPlan = plan;
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-            notifyLocalChange();
-        }
+        const task = tasks.find((t: Task) => t.id === id);
+        if (task) task.aiStudyPlan = plan;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+        notifyLocalChange();
     }
 }
